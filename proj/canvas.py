@@ -20,7 +20,7 @@ class CanvasBase:
         return Image.fromarray(self.im)
     
     def composite_dist(self, other: CanvasBase) -> float:
-        print(self.size, other.size, self.im.shape, other.im.shape)
+        #print(self.size, other.size, self.im.shape, other.im.shape)
         return self.euclid_dist(other) + self.sobel_dist(other)
 
     def euclid_dist(self, other: CanvasBase) -> float:
@@ -33,7 +33,7 @@ class CanvasBase:
         return skimage.filters.sobel(self.im)
     
     def write_image(self, fpath: pathlib.Path) -> None:
-        return skimage.io.imsave(str(fpath), self.im)
+        return skimage.io.imsave(str(fpath), skimage.img_as_ubyte(self.im))
 
 
 @dataclasses.dataclass
@@ -42,15 +42,20 @@ class Canvas(CanvasBase):
 
     @classmethod
     def read_image(cls, fpath: pathlib.Path) -> Canvas:
-        im = cls.read_img(fpath)
+        im = cls.read_image_skimage(fpath)
         return cls(
             fpath=fpath,
             im=im,
         )
     
     @staticmethod
-    def read_img(fpath: pathlib.Path) -> np.ndarray:
-        return skimage.io.imread(str(fpath))
+    def read_image_skimage(fpath: pathlib.Path) -> np.ndarray:
+        im = skimage.io.imread(str(fpath))
+        if len(im.shape) < 3:
+            im = skimage.color.gray2rgb(im)
+        elif im.shape[2] > 3:
+            im = skimage.color.rgba2rgb(im)
+        return im
     
     def split_subcanvases(self, x_divisions: int, y_divisions: int) -> typing.List[SubCanvas]:
         h,w = self.size

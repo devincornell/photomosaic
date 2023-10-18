@@ -47,7 +47,13 @@ class SourceImage:
     
     def write_thumb(self) -> np.ndarray:
         im = skimage.io.imread(str(self.source_fpath))
+
         im = skimage.transform.resize(im, self.scale_res)
+        if len(im.shape) < 3:
+            im = skimage.color.gray2rgb(im)
+        elif len(im.shape) > 3:
+            im = skimage.color.rgba2rgb(im)
+
         skimage.io.imsave(str(self.thumb_fpath), skimage.img_as_ubyte(im))
         return im
 
@@ -69,6 +75,7 @@ class ImageManager:
             source_images += source_folder.rglob(f"*.{ext}")
         
         source_images = [SourceImage.from_fpaths(fpath, thumb_folder, scale_res) for fpath in source_images]
+        random.shuffle(source_images)
         return cls(
             source_images=source_images,
             thumb_folder=thumb_folder,
@@ -80,7 +87,7 @@ class ImageManager:
     
     def __len__(self) -> int:
         return len(self.source_images)
-
+    
     def batches(self, batch_size: int) -> typing.Iterator[typing.List[SourceImage]]:
         num_batches = math.ceil(len(self.source_images) / batch_size)
         for i in range(num_batches):
