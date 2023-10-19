@@ -67,6 +67,25 @@ class Canvas(CanvasBase):
                 sc = SubCanvas.from_canvas(self, ix*x_size, iy*y_size, x_size, y_size)
                 subcanvases.append(sc)
         return subcanvases
+
+    @classmethod
+    def from_subcanvases(cls, scanvases: typing.List[CanvasBase], width: int) -> Canvas:
+        '''Reconstruct a canvas from a list of subcanvases.'''
+        ch,cw = scanvases[0].size
+        full_w = width * cw
+        full_h = (len(scanvases) // width) * ch
+        im = np.zeros((full_h,full_w,3), dtype=np.uint8)
+        for i,sc in enumerate(scanvases):
+            grid_y, grid_x = i // width, i % width
+
+            print(i, grid_y, grid_x, sc.size, im.shape)
+            print(grid_y*ch, (grid_y+1)*ch, grid_x*cw, (grid_x+1)*cw)
+            im[grid_y*ch:(grid_y+1)*ch, grid_x*cw:(grid_x+1)*cw, :] = sc.im
+        return cls(
+            fpath=None,
+            im=im,
+        )
+
     
 @dataclasses.dataclass
 class SubCanvas(CanvasBase):
@@ -79,3 +98,6 @@ class SubCanvas(CanvasBase):
             canvas=canvas,
             im=im,
         )
+
+
+

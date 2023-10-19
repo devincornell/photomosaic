@@ -12,7 +12,7 @@ import multiprocessing
 random.seed(0)
 
 
-def find_best_thread(args: typing.Tuple[int, proj.SubCanvas]) -> typing.Tuple[proj.Canvas, float]:
+def find_best_thread(args: typing.Tuple[int, proj.SubCanvas]) -> proj.Canvas:
     ind, subtarget = args
     random.seed(ind)
     print(ind, 'starting')
@@ -29,6 +29,7 @@ def find_best_thread(args: typing.Tuple[int, proj.SubCanvas]) -> typing.Tuple[pr
     for j, si in tqdm.tqdm(enumerate(imman)):
         try:
             c = si.read_canvas()
+            #return c # NOTE: TESTING ONLY. COMMENT OUT OTHERWISE
             d = subtarget.composite_dist(c)
         except Exception as e:
             print(e)
@@ -40,21 +41,23 @@ def find_best_thread(args: typing.Tuple[int, proj.SubCanvas]) -> typing.Tuple[pr
             best = c
 
         if j % 1000 == 0:
-            best.write_image(f'data/current_{ind}.png')
-    best.write_image(f'data/best_{ind}.png')
+            best.write_image(f'data/obama10x10_euclid/current_{ind}.png')
+    best.write_image(f'data/obama10x10_euclid/best_{ind}.png')
+    return best
 
 
 
 if __name__ == "__main__":
     target = proj.Canvas.read_image(pathlib.Path("data/targets/obama.png"))
-    #im = skimage.transform.resize(target.im, (100,100))
-    #skimage.io.imsave('data/targets/black_circle_small.png', skimage.img_as_ubyte(im))
-    print(target.im.shape)
-    #exit()
-    subtargets = list(enumerate(target.split_subcanvases(10,10)))
+    
+    height, width = 10, 10
+    subtargets = list(enumerate(target.split_subcanvases(width, height)))
     with multiprocessing.Pool(9) as pool:
-        a = pool.map(find_best_thread, subtargets)
-    print(list(a))
+        best: typing.List[proj.Canvas] = list(pool.map(find_best_thread, subtargets))
+    
+    canvas_final = proj.Canvas.from_subcanvases(best, width)
+    canvas_final.write_image(f'data/obama{height}x{width}_euclid.png')
+
     exit()
     canvas_sample = imman.random_canvases(1000)
     #bc, d = find_best(subtargets[0], canvas_sample)
