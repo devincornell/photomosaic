@@ -28,7 +28,7 @@ def find_best_thread(args: typing.Tuple[int, proj.SubCanvas]) -> proj.Canvas:
 
     best: proj.Canvas = None
     best_dist = float('inf')
-    source_images = imman.sample_source_images(10000)
+    source_images = imman.sample_source_images(100000)
     for j, si in tqdm.tqdm(enumerate(source_images)):
         try:
             c = si.retrieve_canvas()
@@ -50,18 +50,61 @@ def find_best_thread(args: typing.Tuple[int, proj.SubCanvas]) -> proj.Canvas:
     best.write_image(op.joinpath(f'best_{ind}.png'))
     return best
 
+
+
+def find_best_chunk_thread(args) -> proj.SubCanvasScores:
+    thread_index: int = args[0]
+    width: int = args[1]
+    source_images: typing.List[proj.SourceImage] = args[2]
+    target_subcanvases: typing.List[proj.SubCanvas] = args[3]
+    
+    # compute distances for every source image to every target subcanvas
+    distances: typing.List[typing.Tuple[int,float,proj.SubCanvas]] = list()
+    for si in tqdm.tqdm(source_images):
+        si_canvas = si.retrieve_canvas()
+        for ind, target_sc in enumerate(target_subcanvases):
+            d = target_sc.dist.composit(si_canvas)
+            distances.append((ind, d, si_canvas))
+           
+    scs = proj.SubCanvasScores.from_distances(distances)
+    best = scs.to_canvas(width)
+    best.write_image(f'data/test2/current_{thread_index}.png')
+    return scs
+
 if __name__ == "__main__":
     target = proj.Canvas.read_image(pathlib.Path("data/targets/obama.png"))
     print(target.im.dtype, target.im.shape)
     
-    height, width = 20, 32
-    subtargets = list(enumerate(target.split_subcanvases(width, height)))
-    with multiprocessing.Pool(9) as pool:
-        map_func = pool.map
-        best: typing.List[proj.Canvas] = list(map_func(find_best_thread, subtargets))
+    if True:
+        height, width = 20, 32
+        subtargets = list(target.split_subcanvases(height, width))
+
+        imman = proj.ImageManager.from_folders(
+            source_folder=pathlib.Path("data/coco_train"),
+            thumb_folder=pathlib.Path("data/coco_thumbs"),
+            scale_res=subtargets[0].size,
+            extensions=('png','jpg'),
+        )
+        
+        batches = [(i,width,bi,subtargets) for i,bi in enumerate(imman.batch_source_images(10000))]
+        with multiprocessing.Pool(9) as pool:
+            map_func = pool.map
+            scss: typing.List[proj.SubCanvasScores] = list(map_func(find_best_chunk_thread, batches))
+
+        best = scss[0]
+        for i in range(1,len(scss)):
+            best = best.reduce_subcanvasscores(scss[i])
+        best.to_canvas(width).write_image(f'data/test2/final.png')
     
-    canvas_final = proj.Canvas.from_subcanvases(best, width)
-    canvas_final.write_image(f'data/obama{height}x{width}_composit.png')
+    if False:
+        height, width = 20, 32
+        subtargets = list(enumerate(target.split_subcanvases(height, width)))
+        with multiprocessing.Pool(9) as pool:
+            map_func = pool.map
+            best: typing.List[proj.Canvas] = list(map_func(find_best_thread, subtargets))
+        
+        canvas_final = proj.Canvas.from_subcanvases(best, width)
+        canvas_final.write_image(f'data/obama{height}x{width}_composit.png')
 
     exit()
     canvas_sample = imman.random_canvases(1000)

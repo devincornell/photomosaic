@@ -71,7 +71,6 @@ class ImageManager:
             source_images += source_folder.rglob(f"*.{ext}")
         
         source_images = [SourceImage.from_fpaths(fpath, thumb_folder, scale_res) for fpath in source_images]
-        random.shuffle(source_images)
         return cls(
             source_images=source_images,
             thumb_folder=thumb_folder,
@@ -81,25 +80,26 @@ class ImageManager:
     #def __iter__(self) -> typing.Iterator[SourceImage]:
     #    return iter(self.source_images)
     
+    def shuffle(self) -> None:
+        random.shuffle(self.source_images)
+    
     def __len__(self) -> int:
         return len(self.source_images)
 
-
-    
     def sample_source_images(self, k: int) -> typing.List[SourceImage]:
         return random.choices(self.source_images, k=k)
     
-    ################## DEPRICATED FOR NOW #################
-    
-    def random_canvases(self, k: int) -> typing.List[Canvas]:
-        fpaths = random.choices(self.source_images, k=k)
-        return [Canvas.read_image(fpath) for fpath in fpaths]
-
-    def batches(self, batch_size: int) -> typing.Iterator[typing.List[SourceImage]]:
+    def batch_source_images(self, batch_size: int) -> typing.List[typing.List[SourceImage]]:
         # NOTE: will rewrite with lazy data loading in the future
         num_batches = math.ceil(len(self.source_images) / batch_size)
+        batches = list()
         for i in range(num_batches):
-            yield self.source_images[i*batch_size:(i+1)*batch_size]
-            
+            batches.append(self.source_images[i*batch_size:(i+1)*batch_size])
+        return batches
+    
+    ################## DEPRICATED FOR NOW #################
+    def random_canvases(self, k: int) -> typing.List[Canvas]:
+        fpaths = random.choices(self.source_images, k=k)
+        return [Canvas.read_image(fpath) for fpath in fpaths]            
             
             
