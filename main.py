@@ -57,6 +57,7 @@ def find_best_chunk_thread(args) -> proj.SubCanvasScores:
     width: int = args[1]
     source_images: typing.List[proj.SourceImage] = args[2]
     target_subcanvases: typing.List[proj.SubCanvas] = args[3]
+    outfolder: pathlib.Path = args[4]
     
     # compute distances for every source image to every target subcanvas
     distances: typing.List[typing.Tuple[int,float,proj.SubCanvas]] = list()
@@ -68,13 +69,15 @@ def find_best_chunk_thread(args) -> proj.SubCanvasScores:
            
     scs = proj.SubCanvasScores.from_distances(distances)
     best = scs.to_canvas(width)
-    best.write_image(f'data/test3/current_{thread_index}.png')
+    best.write_image(outfolder.joinpath(f'current_{thread_index}.png'))
     print(f'\nfinished {thread_index}')
     return scs
 
 if __name__ == "__main__":
     target = proj.Canvas.read_image(pathlib.Path("data/targets/obama.png"))
     print(target.im.dtype, target.im.shape)
+    outfolder = pathlib.Path("data/test4/")
+    outfolder.mkdir(exist_ok=True, parents=True)
     
     if True:
         height, width = 40, 64
@@ -87,7 +90,7 @@ if __name__ == "__main__":
             extensions=('png','jpg'),
         )
         
-        batches = [(i,width,bi,subtargets) for i,bi in enumerate(imman.batch_source_images(2565))]#[:3]
+        batches = [(i,width,bi,subtargets, outfolder) for i,bi in enumerate(imman.batch_source_images(height * width + 5))]
         print(len(imman))
         print(f'running {len(batches)} batches and {len(subtargets)} subcanvases')
         with multiprocessing.Pool(8) as pool:
@@ -97,7 +100,7 @@ if __name__ == "__main__":
         best = scss[0]
         for i in range(1,len(scss)):
             best = best.reduce_subcanvasscores(scss[i])
-        best.to_canvas(width).write_image(f'data/test3/final.png')
+        best.to_canvas(width).write_image(outfolder.joinpath(f'final.png'))
         
     
     if False:

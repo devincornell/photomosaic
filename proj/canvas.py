@@ -126,7 +126,6 @@ class SubCanvasScores(typing.List[SubCanvasScore]):
     @classmethod
     def from_location_dict(cls, d: typing.Dict[int, SubCanvasScores]) -> SubCanvasScores:
         '''Make a set of subcanvases from a dictionary where ind corresponds to each subcanvas.'''
-        print(d.keys())
         return cls(d[i] for i in range(len(d)))
     
     def to_canvas(self, width: int) -> Canvas:
