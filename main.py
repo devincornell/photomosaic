@@ -23,40 +23,45 @@ def find_best_thread(args: typing.Tuple[int, proj.SubCanvas]) -> proj.Canvas:
         scale_res=subtarget.size,
         extensions=('png','jpg'),
     )
+    op = pathlib.Path("data/test/")
+    op.mkdir(exist_ok=True, parents=True)
 
     best: proj.Canvas = None
     best_dist = float('inf')
-    for j, si in tqdm.tqdm(enumerate(imman)):
+    source_images = imman.sample_source_images(10000)
+    for j, si in tqdm.tqdm(enumerate(source_images)):
         try:
-            c = si.read_canvas()
+            c = si.retrieve_canvas()
+            #print(c.im.dtype)
             #return c # NOTE: TESTING ONLY. COMMENT OUT OTHERWISE
-            d = subtarget.composite_dist(c)
+            d = subtarget.dist.composit(c)
         except Exception as e:
             print(e)
             print(si.source_fpath)
-            exit()
+            #exit()
+            raise e
         
         if d < best_dist:
             best_dist = d
             best = c
 
-        if j % 1000 == 0:
-            best.write_image(f'data/obama10x10_euclid/current_{ind}.png')
-    best.write_image(f'data/obama10x10_euclid/best_{ind}.png')
+        if j % 10000 == 0:
+            best.write_image(op.joinpath(f'current_{ind}.png'))
+    best.write_image(op.joinpath(f'best_{ind}.png'))
     return best
-
-
 
 if __name__ == "__main__":
     target = proj.Canvas.read_image(pathlib.Path("data/targets/obama.png"))
+    print(target.im.dtype, target.im.shape)
     
-    height, width = 10, 10
+    height, width = 20, 32
     subtargets = list(enumerate(target.split_subcanvases(width, height)))
     with multiprocessing.Pool(9) as pool:
-        best: typing.List[proj.Canvas] = list(pool.map(find_best_thread, subtargets))
+        map_func = pool.map
+        best: typing.List[proj.Canvas] = list(map_func(find_best_thread, subtargets))
     
     canvas_final = proj.Canvas.from_subcanvases(best, width)
-    canvas_final.write_image(f'data/obama{height}x{width}_euclid.png')
+    canvas_final.write_image(f'data/obama{height}x{width}_composit.png')
 
     exit()
     canvas_sample = imman.random_canvases(1000)

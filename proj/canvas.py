@@ -7,34 +7,41 @@ import skimage
 import numpy as np
 import random
 
+from .util import imread_transform, write_as_uint
+
+@dataclasses.dataclass
+class Distances:
+    canvas: CanvasBase
+    def composit(self, other: CanvasBase) -> float:
+        return self.euclid(other) + self.sobel(other)
+
+    def euclid(self, other: CanvasBase) -> float:
+        return np.linalg.norm(self.canvas.im - other.im)
+            
+    def sobel(self, other: CanvasBase) -> float:
+        return np.linalg.norm(self.canvas.transform_sobel() - other.transform_sobel())
+
 @dataclasses.dataclass
 class CanvasBase:
     im: np.ndarray
-
+    
+    @property
+    def dist(self) -> Distances:
+        return Distances(self)
+    
     @property
     def size(self) -> typing.Tuple[int,int]:
         '''Height, width.'''
-        return self.im.shape[0], self.im.shape[1]
+        return self.im.shape[:2]
+            
+    def write_image(self, fpath: pathlib.Path) -> np.ndarray[np.uint16]:
+        return write_as_uint(self.im, fpath)
     
-    def image(self) -> Image.Image:
+    def to_pillow(self) -> Image.Image:
         return Image.fromarray(self.im)
     
-    def composite_dist(self, other: CanvasBase) -> float:
-        #print(self.size, other.size, self.im.shape, other.im.shape)
-        return self.euclid_dist(other) + self.sobel_dist(other)
-
-    def euclid_dist(self, other: CanvasBase) -> float:
-        return np.linalg.norm(self.im - other.im)
-            
-    def sobel_dist(self, other: CanvasBase) -> float:
-        return np.linalg.norm(self.sobel() - other.sobel())
-
-    def sobel(self) -> np.ndarray:
+    def transform_sobel(self) -> np.ndarray:
         return skimage.filters.sobel(self.im)
-    
-    def write_image(self, fpath: pathlib.Path) -> None:
-        return skimage.io.imsave(str(fpath), skimage.img_as_ubyte(self.im))
-
 
 @dataclasses.dataclass
 class Canvas(CanvasBase):
@@ -42,20 +49,10 @@ class Canvas(CanvasBase):
 
     @classmethod
     def read_image(cls, fpath: pathlib.Path) -> Canvas:
-        im = cls.read_image_skimage(fpath)
         return cls(
             fpath=fpath,
-            im=im,
+            im=imread_transform(fpath),
         )
-    
-    @staticmethod
-    def read_image_skimage(fpath: pathlib.Path) -> np.ndarray:
-        im = skimage.io.imread(str(fpath))
-        if len(im.shape) < 3:
-            im = skimage.color.gray2rgb(im)
-        elif im.shape[2] > 3:
-            im = skimage.color.rgba2rgb(im)
-        return im
     
     def split_subcanvases(self, x_divisions: int, y_divisions: int) -> typing.List[SubCanvas]:
         h,w = self.size
@@ -74,12 +71,9 @@ class Canvas(CanvasBase):
         ch,cw = scanvases[0].size
         full_w = width * cw
         full_h = (len(scanvases) // width) * ch
-        im = np.zeros((full_h,full_w,3), dtype=np.uint8)
+        im = np.zeros((full_h,full_w,3), dtype=np.float64)
         for i,sc in enumerate(scanvases):
             grid_y, grid_x = i // width, i % width
-
-            print(i, grid_y, grid_x, sc.size, im.shape)
-            print(grid_y*ch, (grid_y+1)*ch, grid_x*cw, (grid_x+1)*cw)
             im[grid_y*ch:(grid_y+1)*ch, grid_x*cw:(grid_x+1)*cw, :] = sc.im
         return cls(
             fpath=None,

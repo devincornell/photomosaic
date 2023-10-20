@@ -9,6 +9,7 @@ import skimage
 import math
 
 from .canvas import Canvas, SubCanvas
+from .util import imread_transform, imread_transform_resize, write_as_uint
 
 @dataclasses.dataclass
 class SourceImage:
@@ -36,25 +37,20 @@ class SourceImage:
     def get_thumb_path(fpath: pathlib.Path, thumb_folder: pathlib.Path, scale_res: typing.Tuple[int,int]) -> pathlib.Path:
         return thumb_folder / f'{fpath.stem}_{scale_res[0]}x{scale_res[1]}.{fpath.suffix[1:]}'
     
-    def read_canvas(self) -> Canvas:
-        return Canvas(self.read_image(), self.source_fpath)
+    def retrieve_canvas(self) -> Canvas:
+        return Canvas(self.retrieve_thumb(), self.source_fpath)
 
-    def read_image(self) -> np.ndarray:
+    def retrieve_thumb(self) -> np.ndarray:
+        '''Read from thumb if exists or make thumb and return it.'''
         if self.thumb_fpath.exists():
-            return skimage.io.imread(str(self.thumb_fpath))
+            return imread_transform(self.thumb_fpath)
         else:
             return self.write_thumb()
     
     def write_thumb(self) -> np.ndarray:
-        im = skimage.io.imread(str(self.source_fpath))
-
-        im = skimage.transform.resize(im, self.scale_res)
-        if len(im.shape) < 3:
-            im = skimage.color.gray2rgb(im)
-        elif len(im.shape) > 3:
-            im = skimage.color.rgba2rgb(im)
-
-        skimage.io.imsave(str(self.thumb_fpath), skimage.img_as_ubyte(im))
+        '''Reads original file and writes thumbnail, returning the thumb version.'''
+        im = imread_transform_resize(self.source_fpath, self.scale_res)
+        write_as_uint(im, self.thumb_fpath)
         return im
 
 @dataclasses.dataclass
@@ -82,20 +78,28 @@ class ImageManager:
             scale_res=scale_res,
         )
 
-    def __iter__(self) -> typing.Iterator[SourceImage]:
-        return iter(self.source_images)
+    #def __iter__(self) -> typing.Iterator[SourceImage]:
+    #    return iter(self.source_images)
     
     def __len__(self) -> int:
         return len(self.source_images)
-    
-    def batches(self, batch_size: int) -> typing.Iterator[typing.List[SourceImage]]:
-        num_batches = math.ceil(len(self.source_images) / batch_size)
-        for i in range(num_batches):
-            yield self.source_images[i*batch_size:(i+1)*batch_size]
 
+
+    
+    def sample_source_images(self, k: int) -> typing.List[SourceImage]:
+        return random.choices(self.source_images, k=k)
+    
+    ################## DEPRICATED FOR NOW #################
+    
     def random_canvases(self, k: int) -> typing.List[Canvas]:
         fpaths = random.choices(self.source_images, k=k)
         return [Canvas.read_image(fpath) for fpath in fpaths]
-    
 
-
+    def batches(self, batch_size: int) -> typing.Iterator[typing.List[SourceImage]]:
+        # NOTE: will rewrite with lazy data loading in the future
+        num_batches = math.ceil(len(self.source_images) / batch_size)
+        for i in range(num_batches):
+            yield self.source_images[i*batch_size:(i+1)*batch_size]
+            
+            
+            
