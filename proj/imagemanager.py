@@ -76,10 +76,7 @@ class ImageManager:
             thumb_folder=thumb_folder,
             scale_res=scale_res,
         )
-
-    #def __iter__(self) -> typing.Iterator[SourceImage]:
-    #    return iter(self.source_images)
-    
+        
     def shuffle(self) -> None:
         random.shuffle(self.source_images)
     

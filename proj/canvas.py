@@ -9,7 +9,7 @@ import random
 
 from .util import imread_transform, write_as_uint
 
-@dataclasses.dataclass
+@dataclasses.dataclass(frozen=True)
 class CanvasBase:
     im: np.ndarray
     
@@ -49,7 +49,7 @@ class Distances:
     def sobel(self, other: CanvasBase) -> float:
         return np.linalg.norm(self.canvas.transform_sobel() - other.transform_sobel())
 
-@dataclasses.dataclass
+@dataclasses.dataclass(frozen=True)
 class Canvas(CanvasBase):
     fpath: pathlib.Path
 
@@ -88,7 +88,7 @@ class Canvas(CanvasBase):
         )
     
     
-@dataclasses.dataclass
+@dataclasses.dataclass(frozen=True)
 class SubCanvas(CanvasBase):
     canvas: Canvas
 
@@ -102,7 +102,7 @@ class SubCanvas(CanvasBase):
         )
         
 
-@dataclasses.dataclass(order=True)
+@dataclasses.dataclass(order=True, frozen=True)
 class SubCanvasScore:
     dist: float
     canvas: typing.Union[SubCanvas, Canvas]
@@ -111,18 +111,22 @@ class SubCanvasScores(typing.List[SubCanvasScore]):
     '''Contains a set of subcanvases. Used to reduce two subcanvases with the best solutions.'''
             
     @classmethod
-    def from_distances(cls, scores: typing.List[typing.Tuple[int, float, SubCanvas]]) -> SubCanvasScores:
+    def from_distances(cls, scores: typing.List[typing.Tuple[int, float, Canvas]]) -> SubCanvasScores:
         '''Place the subcanvas with the best score in the right location'''
         locations = dict()
+        finished_sc = set()
         for ind, dist, sc in sorted(scores, key=lambda x: x[1]):
-            if ind not in locations:
+            source_fname = sc.fpath
+            if ind not in locations and source_fname not in finished_sc:
                 locations[ind] = sc.new_subcanvasscore(dist)
+                finished_sc.add(source_fname)
                 
         return cls.from_location_dict(locations)
 
     @classmethod
     def from_location_dict(cls, d: typing.Dict[int, SubCanvasScores]) -> SubCanvasScores:
         '''Make a set of subcanvases from a dictionary where ind corresponds to each subcanvas.'''
+        print(d.keys())
         return cls(d[i] for i in range(len(d)))
     
     def to_canvas(self, width: int) -> Canvas:

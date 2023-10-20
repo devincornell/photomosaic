@@ -68,7 +68,8 @@ def find_best_chunk_thread(args) -> proj.SubCanvasScores:
            
     scs = proj.SubCanvasScores.from_distances(distances)
     best = scs.to_canvas(width)
-    best.write_image(f'data/test2/current_{thread_index}.png')
+    best.write_image(f'data/test3/current_{thread_index}.png')
+    print(f'\nfinished {thread_index}')
     return scs
 
 if __name__ == "__main__":
@@ -76,7 +77,7 @@ if __name__ == "__main__":
     print(target.im.dtype, target.im.shape)
     
     if True:
-        height, width = 20, 32
+        height, width = 40, 64
         subtargets = list(target.split_subcanvases(height, width))
 
         imman = proj.ImageManager.from_folders(
@@ -86,15 +87,18 @@ if __name__ == "__main__":
             extensions=('png','jpg'),
         )
         
-        batches = [(i,width,bi,subtargets) for i,bi in enumerate(imman.batch_source_images(10000))]
-        with multiprocessing.Pool(9) as pool:
+        batches = [(i,width,bi,subtargets) for i,bi in enumerate(imman.batch_source_images(2565))]#[:3]
+        print(len(imman))
+        print(f'running {len(batches)} batches and {len(subtargets)} subcanvases')
+        with multiprocessing.Pool(8) as pool:
             map_func = pool.map
             scss: typing.List[proj.SubCanvasScores] = list(map_func(find_best_chunk_thread, batches))
 
         best = scss[0]
         for i in range(1,len(scss)):
             best = best.reduce_subcanvasscores(scss[i])
-        best.to_canvas(width).write_image(f'data/test2/final.png')
+        best.to_canvas(width).write_image(f'data/test3/final.png')
+        
     
     if False:
         height, width = 20, 32

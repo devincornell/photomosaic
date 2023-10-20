@@ -6,7 +6,7 @@ import skimage
 
 def write_as_uint(im: np.ndarray, fpath: pathlib.Path) -> None:
     '''Writes image as float.'''
-    skimage.io.imsave(str(fpath), skimage.img_as_uint(im))
+    skimage.io.imsave(str(fpath), skimage.img_as_ubyte(im))
 
 def imread_transform_resize(fpath: pathlib.Path, resize_res: typing.Tuple[int,int]) -> np.ndarray:
     '''Read and transform image then scale it according to new resolution'''
