@@ -90,7 +90,7 @@ if __name__ == "__main__":
             extensions=('png','jpg'),
         )
         
-        batches = [(i,width,bi,subtargets, outfolder) for i,bi in enumerate(imman.batch_source_images(height * width + 5))]
+        batches = [(i,width,bi,subtargets, outfolder) for i,bi in enumerate(imman.chunk_source_images(height * width + 5))]
         print(len(imman))
         print(f'running {len(batches)} batches and {len(subtargets)} subcanvases')
         with multiprocessing.Pool(8) as pool:

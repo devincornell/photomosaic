@@ -94,6 +94,15 @@ class ImageManager:
             batches.append(self.source_images[i*batch_size:(i+1)*batch_size])
         return batches
     
+    def chunk_source_images(self, batch_size: int) -> typing.List[typing.List[SourceImage]]:
+        # NOTE: COPY FROM ABOVE EXCEPT I DON"T USE .CEIL()
+        # NOTE: will rewrite with lazy data loading in the future
+        num_batches = len(self.source_images) // batch_size
+        batches = list()
+        for i in range(num_batches):
+            batches.append(self.source_images[i*batch_size:(i+1)*batch_size])
+        return batches
+    
     ################## DEPRICATED FOR NOW #################
     def random_canvases(self, k: int) -> typing.List[Canvas]:
         fpaths = random.choices(self.source_images, k=k)
