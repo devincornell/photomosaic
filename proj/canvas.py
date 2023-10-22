@@ -7,7 +7,7 @@ import skimage
 import numpy as np
 import random
 
-from .util import imread_transform, write_as_uint
+from .util import imread_transform, imread_transform_resize, write_as_uint
 
 @dataclasses.dataclass(frozen=True)
 class CanvasBase:
@@ -54,10 +54,10 @@ class Canvas(CanvasBase):
     fpath: pathlib.Path
 
     @classmethod
-    def read_image(cls, fpath: pathlib.Path) -> Canvas:
+    def read_image(cls, fpath: pathlib.Path, resize_res: typing.Tuple[int,int] = None) -> Canvas:
         return cls(
             fpath=fpath,
-            im=imread_transform(fpath),
+            im=imread_transform(fpath) if resize_res is None else imread_transform_resize(fpath, resize_res),
         )
     
     def split_subcanvases(self, y_divisions: int, x_divisions: int) -> typing.List[SubCanvas]:

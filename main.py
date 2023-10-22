@@ -74,26 +74,27 @@ def find_best_chunk_thread(args) -> proj.SubCanvasScores:
     return scs
 
 if __name__ == "__main__":
-    target = proj.Canvas.read_image(pathlib.Path("data/targets/obama.png"))
+    target = proj.Canvas.read_image(pathlib.Path("data/targets/peace_rainbow.png"))
     print(target.im.dtype, target.im.shape)
-    outfolder = pathlib.Path("data/test4/")
+    outfolder = pathlib.Path("data/peace_rainbow_personal/")
     outfolder.mkdir(exist_ok=True, parents=True)
     
     if True:
-        height, width = 40, 64
+        height, width = 20, 20
         subtargets = list(target.split_subcanvases(height, width))
 
         imman = proj.ImageManager.from_folders(
-            source_folder=pathlib.Path("data/coco_train"),
-            thumb_folder=pathlib.Path("data/coco_thumbs"),
+            source_folder=pathlib.Path("/StorageDrive/"),
+            thumb_folder=pathlib.Path("data/personal_thumbs/"),
             scale_res=subtargets[0].size,
-            extensions=('png','jpg'),
+            extensions=('png','jpg', 'JPG', 'HEIC', 'heic'),
         )
-        
+        print(f'{len(imman)=}')
+        exit()
         batches = [(i,width,bi,subtargets, outfolder) for i,bi in enumerate(imman.chunk_source_images(height * width + 5))]
-        print(len(imman))
-        print(f'running {len(batches)} batches and {len(subtargets)} subcanvases')
-        with multiprocessing.Pool(8) as pool:
+        
+        print(f'running {len(batches)} batches against {len(subtargets)} subcanvases')
+        with multiprocessing.Pool(12) as pool:
             map_func = pool.map
             scss: typing.List[proj.SubCanvasScores] = list(map_func(find_best_chunk_thread, batches))
 
