@@ -62,11 +62,13 @@ def find_best_chunk_thread(args) -> proj.SubCanvasScores:
     # compute distances for every source image to every target subcanvas
     distances: typing.List[typing.Tuple[int,float,proj.SubCanvas]] = list()
     for si in tqdm.tqdm(source_images):
-        si_canvas = si.retrieve_canvas()
-        for ind, target_sc in enumerate(target_subcanvases):
-            d = target_sc.dist.composit(si_canvas)
-            distances.append((ind, d, si_canvas))
-           
+        try:
+            si_canvas = si.retrieve_canvas()
+            for ind, target_sc in enumerate(target_subcanvases):
+                d = target_sc.dist.composit(si_canvas)
+                distances.append((ind, d, si_canvas))
+        except ValueError as e:
+            print(f'\ncouldn\'t load image {si.source_fpath}')
     scs = proj.SubCanvasScores.from_distances(distances)
     best = scs.to_canvas(width)
     best.write_image(outfolder.joinpath(f'current_{thread_index}.png'))
@@ -76,7 +78,7 @@ def find_best_chunk_thread(args) -> proj.SubCanvasScores:
 if __name__ == "__main__":
     target = proj.Canvas.read_image(pathlib.Path("data/targets/peace_rainbow.png"))
     print(target.im.dtype, target.im.shape)
-    outfolder = pathlib.Path("data/peace_rainbow_personal/")
+    outfolder = pathlib.Path("data/peace_rainbow_personal2/")
     outfolder.mkdir(exist_ok=True, parents=True)
     
     if True:
@@ -90,8 +92,8 @@ if __name__ == "__main__":
             extensions=('png','jpg', 'JPG', 'HEIC', 'heic'),
         )
         print(f'{len(imman)=}')
-        exit()
-        batches = [(i,width,bi,subtargets, outfolder) for i,bi in enumerate(imman.chunk_source_images(height * width + 5))]
+        #exit()
+        batches = [(i,width,bi,subtargets, outfolder) for i,bi in enumerate(imman.chunk_source_images(height * width + 10))]
         
         print(f'running {len(batches)} batches against {len(subtargets)} subcanvases')
         with multiprocessing.Pool(12) as pool:
