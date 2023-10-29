@@ -45,9 +45,9 @@ def find_best_thread(args: typing.Tuple[int, proj.SubCanvas]) -> proj.Canvas:
             best_dist = d
             best = c
 
-        if j % 10000 == 0:
-            best.write_image(op.joinpath(f'current_{ind}.png'))
-    best.write_image(op.joinpath(f'best_{ind}.png'))
+        #if j % 10000 == 0:
+        #    best.write_image(op.joinpath(f'current_{ind}.png'))
+    #best.write_image(op.joinpath(f'best_{ind}.png'))
     return best
 
 
@@ -76,9 +76,9 @@ def find_best_chunk_thread(args) -> proj.SubCanvasScores:
     return scs
 
 if __name__ == "__main__":
-    target = proj.Canvas.read_image(pathlib.Path("data/targets/peace_rainbow.png"))
+    target = proj.Canvas.read_image(pathlib.Path("data/targets/obama_bigger.jpeg"))
     print(target.im.dtype, target.im.shape)
-    outfolder = pathlib.Path("data/peace_rainbow_personal2/")
+    outfolder = pathlib.Path("data/obama_bigger_20x20-01/")
     outfolder.mkdir(exist_ok=True, parents=True)
     
     if True:
@@ -86,14 +86,14 @@ if __name__ == "__main__":
         subtargets = list(target.split_subcanvases(height, width))
 
         imman = proj.ImageManager.from_folders(
-            source_folder=pathlib.Path("/StorageDrive/"),
+            source_folder=pathlib.Path("/StorageDrive/unzipped_photos/Takeout/main_photos/"),
             thumb_folder=pathlib.Path("data/personal_thumbs/"),
             scale_res=subtargets[0].size,
-            extensions=('png','jpg', 'JPG', 'HEIC', 'heic'),
+            extensions=('png','jpg', 'JPG'),
         )
         print(f'{len(imman)=}')
         #exit()
-        batches = [(i,width,bi,subtargets, outfolder) for i,bi in enumerate(imman.chunk_source_images(height * width + 10))]
+        batches = [(i,width,bi,subtargets, outfolder) for i,bi in enumerate(imman.chunk_source_images(height * width * 2))]
         
         print(f'running {len(batches)} batches against {len(subtargets)} subcanvases')
         with multiprocessing.Pool(12) as pool:
