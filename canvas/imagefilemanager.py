@@ -61,9 +61,16 @@ class ImageFileManager:
     def read_files(self, extensions: typing.Tuple[str] = ('png')) -> typing.List[SourceImage]:
         '''Find all relevent files.'''
         source_images = [p for ext in extensions for p in self.root_path.rglob(f"*.{ext}")]
+        print(f'{len(source_images)=}')
         source_images = [SourceImage.from_files(p) for p in source_images if SourceImage.check_json_exists(p)]
+        print(f'{len(source_images)=}')
         return source_images
         
+    def get_usable_files(self, extensions: typing.Tuple[str] = ('png')) -> typing.List[SourceImage]:
+        '''Find all relevent files.'''
+        sources = self.read_files(extensions=extensions)
+        print(f'{len(sources)=}')
+        return [s for s in sources if s.is_usable()]  
 
 def img_to_json_path(img_path: pathlib.Path) -> pathlib.Path:
     return img_path.with_suffix(str(img_path.suffix)+'.json')

@@ -8,6 +8,7 @@ import random
 import skimage
 import math
 
+from .imagefilemanager import SourceImage, ImageFileManager
 from .canvas import Canvas, SubCanvas
 from .util import imread_transform, imread_transform_resize, write_as_uint
 
@@ -73,6 +74,15 @@ class ImageManager:
         source_images = [SourceImage.from_fpaths(fpath, thumb_folder, scale_res) for fpath in source_images]
         return cls(
             source_images=source_images,
+            thumb_folder=thumb_folder,
+            scale_res=scale_res,
+        )
+    
+    @classmethod
+    def from_file_manager(cls, manager: ImageFileManager, thumb_folder: pathlib.Path, scale_res: typing.Tuple[int,int], extensions: typing.Tuple) -> ImageManager:
+        paths = [si.img_path for si in manager.get_usable_files(extensions=extensions)]
+        return cls(
+            source_images=[SourceImage.from_fpaths(p, thumb_folder, scale_res) for p in paths],
             thumb_folder=thumb_folder,
             scale_res=scale_res,
         )
