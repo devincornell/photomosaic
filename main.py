@@ -13,52 +13,6 @@ random.seed(0)
 
 import canvas
 
-def find_best_thread(args: typing.Tuple[int, canvas.SubCanvas]) -> canvas.Canvas:
-    ind, subtarget = args
-    random.seed(ind)
-    print(ind, 'starting')
-
-    #imman = canvas.ImageManager.from_folders(
-    #    source_folder=pathlib.Path("data/coco_train"),
-    #    thumb_folder=pathlib.Path("data/coco_thumbs"),
-    #    scale_res=subtarget.size,
-    #    extensions=('png','jpg'),
-    #)
-    imman = canvas.ImageManager.from_file_manager(
-        manager=canvas.ImageFileManager(
-            root_path = pathlib.Path('/StorageDrive/unzipped_photos/Takeout/'),
-        ),
-        thumb_folder = pathlib.Path("data/coco_thumbs"),
-        scale_res = subtarget.size,
-    )
-    op = pathlib.Path("data/test/")
-    op.mkdir(exist_ok=True, parents=True)
-
-    best: canvas.Canvas = None
-    best_dist = float('inf')
-    source_images = imman.sample_source_images(100000)
-    for j, si in tqdm.tqdm(enumerate(source_images)):
-        try:
-            c = si.retrieve_canvas()
-            #print(c.im.dtype)
-            #return c # NOTE: TESTING ONLY. COMMENT OUT OTHERWISE
-            d = subtarget.dist.composit(c)
-        except Exception as e:
-            print(e)
-            print(si.source_fpath)
-            #exit()
-            raise e
-        
-        if d < best_dist:
-            best_dist = d
-            best = c
-
-        #if j % 10000 == 0:
-        #    best.write_image(op.joinpath(f'current_{ind}.png'))
-    #best.write_image(op.joinpath(f'best_{ind}.png'))
-    return best
-
-
 
 def find_best_chunk_thread(args) -> canvas.SubCanvasScores:
     thread_index: int = args[0]
