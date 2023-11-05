@@ -83,58 +83,59 @@ def find_best_chunk_thread(args) -> canvas.SubCanvasScores:
     print(f'\nfinished {thread_index}')
     return scs
 
-if __name__ == "__main__":
-    target = canvas.Canvas.read_image(pathlib.Path("data/targets/obama.png"))
+def main():
+    target = canvas.Canvas.read_image(pathlib.Path("data/targets/lofi.jpg"))
     print(target.im.dtype, target.im.shape)
-    outfolder = pathlib.Path("data/obama_20x20-01_filtered/")
+    outfolder = pathlib.Path("data/lofi-30x30/")
     outfolder.mkdir(exist_ok=True, parents=True)
     
     if True:
-        import coproc
+        #import coproc
         
-        with coproc.Monitor(fig_path='progress.png', log_path='progress.log', snapshot_seconds=1, save_fig_freq=1) as monitor:
-                
-            height, width = 20, 20
-            subtargets = list(target.split_subcanvases(height, width))
+        #with coproc.Monitor(fig_path='progress.png', log_path='progress.log', snapshot_seconds=1, save_fig_freq=1) as monitor:
+            
+        height, width = 30, 30
+        subtargets = list(target.split_subcanvases(height, width))
 
-            #imman = canvas.ImageManager.from_folders(
-            #    source_folder=pathlib.Path("/StorageDrive/unzipped_photos/Takeout/main_photos/"),
-            #    thumb_folder=pathlib.Path("data/personal_thumbs/"),
-            #    scale_res=subtargets[0].size,
-            #    extensions=('png','jpg', 'JPG'),
-            #)
-            
-            imman = canvas.ImageManager.from_file_manager(
-                manager=canvas.ImageFileManager(
-                    root_path = pathlib.Path('/StorageDrive/unzipped_photos/Takeout/'),
-                ),
-                thumb_folder=pathlib.Path("data/personal_thumbs/"),
-                scale_res=subtargets[0].size,
-                extensions=('png','jpg', 'JPG'),
-            )
-            print(f'{len(imman)=}')
-            monitor.add_note(f'{len(imman)=}')
-            #exit()
-            batches = [(i,width,bi,subtargets, outfolder) for i,bi in enumerate(imman.chunk_source_images(height * width * 2))]
-            
-            print(f'running {len(batches)} batches against {len(subtargets)} subcanvases')
-            with multiprocessing.Pool(12) as pool:
-                monitor.update_child_processes()
-                
-                map_func = pool.imap_unordered
-                scss: typing.List[canvas.SubCanvasScores] = list()
-                for i, r in enumerate(map_func(find_best_chunk_thread, batches)):
-                    scss.append(r)
-                    monitor.add_note(f'finished batch {i}')
-                    
-            monitor.add_note('finished all batches')
-            best = scss[0]
-            for i in range(1,len(scss)):
-                best = best.reduce_subcanvasscores(scss[i])
-            best.to_canvas(width).write_image(outfolder.joinpath(f'final.png'))
+        #imman = canvas.ImageManager.from_folders(
+        #    source_folder=pathlib.Path("/StorageDrive/unzipped_photos/Takeout/main_photos/"),
+        #    thumb_folder=pathlib.Path("data/personal_thumbs/"),
+        #    scale_res=subtargets[0].size,
+        #    extensions=('png','jpg', 'JPG'),
+        #)
         
+        imman = canvas.ImageManager.from_file_manager(
+            manager=canvas.ImageFileManager(
+                root_path = pathlib.Path('/StorageDrive/unzipped_photos/Takeout/'),
+            ),
+            thumb_folder=pathlib.Path("data/personal_thumbs/"),
+            scale_res=subtargets[0].size,
+            extensions=('png','jpg', 'JPG'),
+        )
+        print(f'{len(imman)=}')
+        #monitor.add_note(f'{len(imman)=}')
+        #exit()
+        batches = [(i,width,bi,subtargets, outfolder) for i,bi in enumerate(imman.chunk_source_images(height * width * 2))]
+        
+        print(f'running {len(batches)} batches against {len(subtargets)} subcanvases')
+        with multiprocessing.Pool(12) as pool:
+            #monitor.update_child_processes()
+            
+            map_func = pool.imap_unordered
+            scss: typing.List[canvas.SubCanvasScores] = list()
+            for i, r in enumerate(map_func(find_best_chunk_thread, batches)):
+                scss.append(r)
+                #monitor.add_note(f'finished batch {i}')
+                
+        #monitor.add_note('finished all batches')
+        best = scss[0]
+        for i in range(1,len(scss)):
+            best = best.reduce_subcanvasscores(scss[i])
+        best.to_canvas(width).write_image(outfolder.joinpath(f'final.png'))
+    
 
-
+if __name__ == "__main__":
+    main()
 
 
 
