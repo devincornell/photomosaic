@@ -31,6 +31,8 @@ def find_best_chunk_thread(args) -> canvas.SubCanvasScores:
                 distances.append((ind, d, si_canvas))
         except ValueError as e:
             print(f'\ncouldn\'t load image {si.source_fpath}')
+        except OSError as e:
+            print(f'\ncouldn\'t load image {si.source_fpath}')
     scs = canvas.SubCanvasScores.from_distances(distances)
     best = scs.to_canvas(width)
     best.write_image(outfolder.joinpath(f'current_{thread_index}.png'))
@@ -40,9 +42,12 @@ def find_best_chunk_thread(args) -> canvas.SubCanvasScores:
 def main():
     import coproc
 
-    target = canvas.Canvas.read_image(pathlib.Path("data/targets/Gray-Mountain.webp"))
+    target = canvas.Canvas.read_image(
+        #fpath=pathlib.Path("data/targets/Gray-Mountain_small.webp"),
+        fpath=pathlib.Path("data/targets/lofi_tiny.jpg"),
+    )
     
-    outfolder = pathlib.Path("data/mountain-30x30/")
+    outfolder = pathlib.Path("data/lofi-30x30/")
     outfolder.mkdir(exist_ok=True, parents=True)
 
     the_monitor = coproc.Monitor(
