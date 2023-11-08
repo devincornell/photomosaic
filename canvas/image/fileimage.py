@@ -1,7 +1,7 @@
 from __future__ import annotations
 import dataclasses
 import typing
-import skimage
+import skimage # type: ignore
 import numpy as np
 import pathlib
 
