@@ -64,7 +64,7 @@ class ImageGrid:
         )
     
     ################## Dunder ##################
-    def __getitem__(self, ind: typing.Union[typing.Tuple[Y,X],int]) -> Image:
+    def __getitem__(self, ind: typing.Union[typing.Tuple[GridY,GridX],int]) -> Image:
         '''Get image at (y,x) location.'''
         y,x = ind
         if y >= self.y_divisions:

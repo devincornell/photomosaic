@@ -86,22 +86,5 @@ class Image:
     def as_float(self) -> Image:
         return self.copy(im=skimage.img_as_float(self.im))
 
-    ################ Splitting and Recombining ################
-
-
-    @classmethod
-    def from_image_grid(cls, image_grid: ImageGrid, width: int) -> Canvas:
-        '''Reconstruct a canvas from a list of subcanvases.'''
-        ch,cw = scanvases[0].size
-        full_w = width * cw
-        full_h = (len(scanvases) // width) * ch
-        im = np.zeros((full_h,full_w,3), dtype=np.float64)
-        for i,sc in enumerate(scanvases):
-            grid_y, grid_x = i // width, i % width
-            im[grid_y*ch:(grid_y+1)*ch, grid_x*cw:(grid_x+1)*cw, :] = sc.im
-        return cls(
-            fpath=None,
-            im=im,
-        )
 
 
