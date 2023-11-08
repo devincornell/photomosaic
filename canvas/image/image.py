@@ -18,6 +18,23 @@ class Width(int):
 class Image:
     im: np.ndarray
 
+    def copy(self, **new_values) -> Image:
+        '''Copy all but provided attributes.'''
+        return self.__class__(**{**dataclasses.asdict(self), **new_values})
+    
+    def cast(self, new_type: type, **additional_data) -> Image:
+        return new_type(**{**dataclasses.asdict(self), **additional_data})
+
+    ################ Dunder ################
+    def __getitem__(self, ind: typing.Union[slice, typing.Tuple[slice, ...]]) -> Image:
+        '''Get image at index or (y,x) index.'''
+        return self.copy(im=self.im[ind])
+    
+    def slice(self, y: int, x: int, h: int, w: int) -> Image:
+        '''Get image at index or (y,x) index.'''
+        return self[x:x+w, y:y+h]
+
+    ################ Properties ################
     @property
     def dist(self) -> Distances:
         return Distances(self)
@@ -31,10 +48,6 @@ class Image:
     def shape(self) -> typing.Tuple[Height, Width, int]:
         '''Shape of image.'''
         return self.im.shape
-
-    def copy(self, **new_values) -> Image:
-        '''Copy all but provided attributes.'''
-        return self.__class__(**{**dataclasses.asdict(self), **new_values})
 
     ################ Read/Writing ################
     @classmethod
@@ -75,17 +88,6 @@ class Image:
 
     ################ Splitting and Recombining ################
 
-    def split_grid(self, y_divisions: int, x_divisions: int) -> typing.List[Image]:
-        '''Create by dividing up a single canvas into equal parts.'''
-        h,w = self.size
-        x_size = w // x_divisions
-        y_size = h // y_divisions
-        subimages = []
-        for iy in range(y_divisions):
-            for ix in range(x_divisions):
-                sc = self.__class__.slice(self, ix*x_size, iy*y_size, x_size, y_size)
-                subimages.append(sc)
-        return subimages
 
     @classmethod
     def from_image_grid(cls, image_grid: ImageGrid, width: int) -> Canvas:
