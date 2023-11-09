@@ -2,12 +2,12 @@ from __future__ import annotations
 import pathlib
 import dataclasses
 import typing
-from PIL import Image
+from PIL import Image # type: ignore
 import numpy as np
 import random
-import skimage
+import skimage # type: ignore
 import math
-
+import json
 #from .imagefilemanager import SourceImage, ImageFileManager
 #from .canvas import Canvas, SubCanvas
 #from .sourceimage import SourceImage
@@ -17,10 +17,17 @@ from .image import FileImage, Height, Width
 @dataclasses.dataclass
 class Metadata:
     data: typing.Dict[str, typing.Any]
+    json_path: pathlib.Path
 
     @classmethod
     def read_json(cls, json_path: pathlib.Path) -> Metadata:
-        pass
+        json_path = pathlib.Path(json_path)
+        with json_path.open('r') as f:
+            data = json.load(f)
+        return cls(
+            data = data,
+            json_path = json_path,
+        )
 
     def is_photo(self) -> bool:
         origin = self.data.get('googlePhotosOrigin')
@@ -72,7 +79,7 @@ class SourceImage:
         else:
             thumb_image = self.read_image(self.image_path).resize(self.shape)
             thumb_image.as_ubyte().write(self.thumb_path)
-            return thumb_image
+            return thumb_image # type: ignore
     
     def has_thumb(self) -> bool:
         return self.thumb_path.exists()
@@ -80,7 +87,7 @@ class SourceImage:
     @staticmethod
     def read_image(path: pathlib.Path) -> FileImage:
         '''Read image, convert to float, and transform to RGB.'''
-        FileImage.read(path).as_float().transform_color_rgb()
+        return FileImage.read(path).as_float().transform_color_rgb() # type: ignore
             
 def img_to_json_path(img_path: pathlib.Path) -> pathlib.Path:
     return img_path.with_suffix(str(img_path.suffix)+'.json')

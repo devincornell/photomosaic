@@ -7,65 +7,27 @@ import numpy as np
 import random
 import skimage
 import math
+import tqdm
+import multiprocessing
 
-from .imagefilemanager import SourceImage, ImageFileManager
-from .canvas import Canvas, SubCanvas
-from .util import imread_transform, imread_transform_resize, write_as_uint
-
-@dataclasses.dataclass
-class SourceImage:
-    source_fpath: pathlib.Path
-    thumb_fpath: pathlib.Path
-    scale_res: typing.Tuple[int,int]
-
-    @classmethod
-    def from_fpaths(cls, source_fpath: pathlib.Path, thumb_folder: pathlib.Path, scale_res: typing.Tuple[int,int]) -> SourceImage:
-        return cls(
-            source_fpath=source_fpath,
-            thumb_fpath=cls.get_thumb_path(source_fpath, thumb_folder, scale_res),
-            scale_res=scale_res,
-        )
-    
-    @classmethod
-    def from_manager(cls, source_fpath: pathlib.Path, manager: ImageManager) -> SourceImage:
-        return cls(
-            source_fpath=source_fpath,
-            thumb_folder=cls.get_thumb_path(source_fpath, manager.thumb_folder, manager.scale_res),
-            scale_res=manager.scale_res,
-        )
-
-    @staticmethod
-    def get_thumb_path(fpath: pathlib.Path, thumb_folder: pathlib.Path, scale_res: typing.Tuple[int,int]) -> pathlib.Path:
-        return thumb_folder / f'{fpath.stem}_{scale_res[0]}x{scale_res[1]}.{fpath.suffix[1:]}'
-    
-    def retrieve_canvas(self) -> Canvas:
-        return Canvas(self.retrieve_thumb(), self.source_fpath)
-
-    def retrieve_thumb(self) -> np.ndarray:
-        '''Read from thumb if exists or make thumb and return it.'''
-        if self.thumb_fpath.exists():
-            return imread_transform(self.thumb_fpath)
-        else:
-            return self.write_thumb()
-    
-    def write_thumb(self) -> np.ndarray:
-        '''Reads original file and writes thumbnail, returning the thumb version.'''
-        im = imread_transform_resize(self.source_fpath, self.scale_res)
-        write_as_uint(im, self.thumb_fpath)
-        return im
+#from .imagefilemanager import SourceImage, ImageFileManager
+#from .canvas import Canvas, SubCanvas
+#from .util import imread_transform, imread_transform_resize, write_as_uint
+from .sourceimage import SourceImage
+from .image import Height, Width
 
 @dataclasses.dataclass
 class ImageManager:
     source_images: typing.List[SourceImage]
     thumb_folder: pathlib.Path
-    scale_res: typing.Tuple[int,int]
+    scale_res: typing.Tuple[Height, Width]
 
     @classmethod
-    def from_folders(cls, 
+    def from_rglob(cls, 
         source_folder: pathlib.Path, 
-        thumb_folder: typing.List[pathlib.Path], 
+        thumb_folder: pathlib.Path, 
         scale_res: typing.Tuple[int,int],
-        extensions=('png',),
+        extensions=('png','PNG', 'jpg', 'JPG'),
     ) -> ImageManager:
         source_images = list()
         for ext in extensions:
@@ -78,25 +40,46 @@ class ImageManager:
             scale_res=scale_res,
         )
     
-    @classmethod
-    def from_file_manager(cls, manager: ImageFileManager, thumb_folder: pathlib.Path, scale_res: typing.Tuple[int,int], extensions: typing.Tuple) -> ImageManager:
-        paths = [si.img_path for si in manager.get_usable_files(extensions=extensions)]
-        return cls(
-            source_images=[SourceImage.from_fpaths(p, thumb_folder, scale_res) for p in paths],
-            thumb_folder=thumb_folder,
-            scale_res=scale_res,
-        )
-        
-    def shuffle(self) -> None:
-        random.shuffle(self.source_images)
-    
+    ########## Dunder ##########
     def __len__(self) -> int:
         return len(self.source_images)
-
-    def sample_source_images(self, k: int) -> typing.List[SourceImage]:
-        return random.choices(self.source_images, k=k)
+        
+    ########## Thumbnails ##########
+    def create_thumbs(self, batch_size: int = 100, use_tqdm: bool = False) -> int:
+        '''Create and save thumbnails.'''
+        batches = self.batch_source_images(batch_size=batch_size)
+        with multiprocessing.Pool() as pool:
+            it = pool.imap_unordered(self.thread_retrieve_thumbs, batches)
+            if use_tqdm:
+                it = tqdm.tqdm(it, total=len(batches))
+            for _ in it:
+                pass
+            
+    @staticmethod
+    def thread_retrieve_thumbs(sis: typing.List[SourceImage]) -> Image:
+        '''Read and save a set of thumbs.'''
+        for si in sis:
+            return si.retrieve_thumb()
+        
+    ########## Filtering ##########
+    def filter_usable_photo(self, **kwargs) -> ImageManager:
+        '''Filters images, keeping only those SourceImages that are usable photos.'''
+        return self.filter(lambda si: si.is_usable_photo(), **kwargs)
+        
+    def filter(self, func: typing.Callable[[SourceImage], bool], use_tqdm: bool = False) -> ImageManager:
+        '''Filters the ImageManager, keeping only those SourceImages for which func returns True.'''
+        imgs = tqdm.tqdm(self.source_images) if use_tqdm else self.source_images
+        return self.copy(
+            source_images=[si for si in imgs if func(si)]
+        )
+        
+    def copy(self, **new_attributes) -> ImageManager:
+        '''Copies the ImageManager, optionally updating attributes.'''
+        return self.__class__(**{**dataclasses.asdict(self), **new_attributes})
     
+    ########## Batching ##########
     def batch_source_images(self, batch_size: int) -> typing.List[typing.List[SourceImage]]:
+        '''Gets batches each of size batch_size, and includes the last batch even if it is smaller than batch_size.'''
         # NOTE: will rewrite with lazy data loading in the future
         num_batches = math.ceil(len(self.source_images) / batch_size)
         batches = list()
@@ -105,6 +88,7 @@ class ImageManager:
         return batches
     
     def chunk_source_images(self, batch_size: int) -> typing.List[typing.List[SourceImage]]:
+        '''Gets chunks each of size batch_size, and discards the last chunk if it is smaller than batch_size.'''
         # NOTE: COPY FROM ABOVE EXCEPT I DON"T USE .CEIL()
         # NOTE: will rewrite with lazy data loading in the future
         num_batches = len(self.source_images) // batch_size
@@ -113,9 +97,3 @@ class ImageManager:
             batches.append(self.source_images[i*batch_size:(i+1)*batch_size])
         return batches
     
-    ################## DEPRICATED FOR NOW #################
-    def random_canvases(self, k: int) -> typing.List[Canvas]:
-        fpaths = random.choices(self.source_images, k=k)
-        return [Canvas.read_image(fpath) for fpath in fpaths]            
-            
-            

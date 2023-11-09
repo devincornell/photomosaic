@@ -5,9 +5,9 @@ import skimage
 import numpy as np
 import pathlib
 
-if typing.TYPE_CHECKING:
-    from .image import Image, Height, Width
-    from .subimage import SubImage
+#if typing.TYPE_CHECKING:
+from .image import Image, Height, Width
+from .subimage import SubImage
 
 class GridX(int):
     pass
@@ -22,7 +22,7 @@ class ImageGrid:
 
     ################## factory method constructors ##################
     @classmethod
-    def from_fixed_subimages(cls, image: Image, subimage_height: Height, subimage_width: Width) -> typing.List[Image]:
+    def from_fixed_subimages(cls, image: Image, subimage_height: Height, subimage_width: Width) -> ImageGrid:
         '''Create by creating a grid of fixed-size sqares that fill the image.'''
         full_h,full_w = image.size
         return cls.from_specs(
@@ -99,7 +99,8 @@ class ImageGrid:
     ################## Saving ##################
     def to_image(self) -> Image:
         '''Reconstruct a canvas from a list of subcanvases.'''
-        im = np.zeros(self.full_size, dtype=np.float64)
+        print(f'{self.full_size=}')
+        im = np.zeros(self.full_size + (3,), dtype=np.float64)
         for i,si in enumerate(self.subimages):
             im[si.window.y:si.window.y+si.window.h, si.window.x:si.window.x+si.window.w, :] = si.im
         return Image(im=im)

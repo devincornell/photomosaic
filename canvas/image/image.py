@@ -5,7 +5,7 @@ import skimage # type: ignore
 import numpy as np
 import pathlib
 
-from .imagegrid import ImageGrid
+#from .imagegrid import ImageGrid
 from .distances import Distances
 
 class Height(int):
@@ -31,9 +31,9 @@ class Image:
         '''Get image at index or (y,x) index.'''
         return self.copy(im=self.im[ind])
     
-    def slice(self, y: int, x: int, h: int, w: int) -> Image:
-        '''Get image at index or (y,x) index.'''
-        return self[x:x+w, y:y+h]
+    #def slice(self, y: int, x: int, h: int, w: int) -> Image:
+    #    '''Get image at index or (y,x) index.'''
+    #    return self[x:x+w, y:y+h]
 
     ################ Properties ################
     @property
@@ -77,6 +77,8 @@ class Image:
             im = skimage.color.gray2rgb(self.im)
         elif self.im.shape[2] > 3:
             im = skimage.color.rgba2rgb(self.im)
+        else:
+            im = self.im
         return self.copy(im=im)
 
     
