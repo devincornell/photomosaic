@@ -20,4 +20,4 @@ class Distances:
         return np.linalg.norm(self.image.im - other.im)
             
     def sobel(self, other: Image) -> float:
-        return np.linalg.norm(self.image.sobel() - other.sobel())
+        return np.linalg.norm(self.image.filter_sobel_image() - other.filter_sobel_image())

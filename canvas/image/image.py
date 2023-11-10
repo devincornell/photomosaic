@@ -65,8 +65,11 @@ class Image:
 
     ################ Transforms ################
 
-    def sobel(self) -> Image:
+    def filter_sobel(self) -> Image:
         return self.copy(im=skimage.filters.sobel(self.im))
+    
+    def filter_sobel_image(self) -> Image:
+        return skimage.filters.sobel(self.im)
     
     def resize(self, resize_shape: typing.Tuple[Height, Width], **kwargs) -> Image:
         return self.copy(im=skimage.transform.resize(self.im, resize_shape, **kwargs))
