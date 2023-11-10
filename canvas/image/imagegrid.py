@@ -91,10 +91,22 @@ class ImageGrid:
     @property
     def sub_size(self) -> typing.Tuple[Height, Width]:
         return self.subimages[0].window.h, self.subimages[0].window.w
+    
+    @property
+    def size(self) -> typing.Tuple[int,int]:
+        return self.y_divisions, self.x_divisions
 
     @property
     def x_divisions(self) -> int:
         return len(self.subimages) // self.y_divisions
+
+    ################## Getting Grid items ##################
+    def images(self) -> typing.List[typing.Tuple[typing.Tuple[GridX, GridY], SubImage]]:
+        '''Get the subimages at a grid location.'''
+        images = list()
+        for i,si in enumerate(self.subimages):
+            images.append((self.ind_to_xy(i,self.y_divisions), si))
+        return images
 
     ################## Saving ##################
     def to_image(self) -> Image:
