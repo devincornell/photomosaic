@@ -34,7 +34,7 @@ class Metadata:
         if origin is None:
             return False
         try:
-            return origin['mobileUpload']['deviceFolder']['localFolderName'] == ''
+            return origin['mobileUpload']['deviceFolder']['localFolderName'] == ''# and self.json_path
         except KeyError as e:
             return False
 

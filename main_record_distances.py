@@ -103,6 +103,7 @@ def main(preprocess_thumbs: bool = False):
         monitor.label('grabbing source images')
         imman = canvas.ImageManager.from_rglob(
             source_folder=pathlib.Path("/StorageDrive/unzipped_photos/Takeout/"),
+            #source_folder=pathlib.Path("/StorageDrive/unzipped_photos/Takeout/Google Photos/V_D/"),
             thumb_folder=pathlib.Path("data/personal_thumbs2/"),
             scale_res=thumb_res,
             extensions=('png','jpg', 'JPG'),
@@ -112,7 +113,7 @@ def main(preprocess_thumbs: bool = False):
         imman = imman.filter_usable_photo(use_tqdm=True)
         monitor.print(f'{len(imman)=} (after filtering)')
         
-        imman = imman.clone(source_images=imman.source_images[:1000])
+        #imman = imman.clone(source_images=imman.source_images[:1000])
         
         monitor.print(f'preprocessing {len(imman)=} thumbs')
         for t in imman.read_thumbs_parallel(use_tqdm=True, processes=4):
