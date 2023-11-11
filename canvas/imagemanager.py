@@ -48,7 +48,7 @@ class ImageManager:
         
     ########## reading thumbs ##########
     def read_thumbs_parallel(self, 
-        batch_size: int = 10, 
+        batch_size: int = 1, 
         use_tqdm: bool = False, 
         processes: int = os.cpu_count(), 
         limit: int = None
@@ -60,7 +60,7 @@ class ImageManager:
                 yield thumb
                 
     def read_thumbs(self, 
-        batch_size: int = 10, 
+        batch_size: int = 1, 
         use_tqdm: bool = False, 
         limit: int = None
     ) -> typing.Generator[FileImage]:
@@ -101,16 +101,16 @@ class ImageManager:
     def filter(self, func: typing.Callable[[SourceImage], bool], use_tqdm: bool = False) -> ImageManager:
         '''Filters the ImageManager, keeping only those SourceImages for which func returns True.'''
         imgs = tqdm.tqdm(self.source_images) if use_tqdm else self.source_images
-        return self.copy(
-            source_images=[si for si in imgs if func(si)]
+        return self.clone(
+            source_images=[si for si in imgs if func(si)],
         )
     
     ########## Batching ##########
     def batch_image_managers(self, batch_size: int) -> typing.List[ImageManager]:
         '''Return new managers, each with a subset of the original source images.'''
         batched_imans = list()
-        for batch in self.batch_source_images(batch_size=batch_size):
-            batched_imans.append(self.copy(source_images=batch))
+        for batch in (self.batch_source_images(batch_size=batch_size)):
+            batched_imans.append(self.clone(source_images=batch))
         return batched_imans
     
     def batch_source_images(self, batch_size: int) -> typing.List[typing.List[SourceImage]]:
@@ -133,7 +133,17 @@ class ImageManager:
         return batches
     
     ############# Copying #############
-    def copy(self, **new_attributes) -> ImageManager:
+    def clone(self, **new_attributes) -> ImageManager:
         '''Copies the ImageManager, optionally updating attributes.'''
-        return self.__class__(**{**dataclasses.asdict(self), **new_attributes})
-    
+        # original: **{**dataclasses.asdict(self), **new_attributes}
+        # NOTE: dataclasses.asdict is recursive, so it tries to convert 
+        # member dataclasses to dicts as well. instead I use this loop
+        
+        new_data = dict()
+        for field in dataclasses.fields(self):
+            if field.name in new_attributes:
+                new_data[field.name] = new_attributes[field.name]
+            else:
+                new_data[field.name] = getattr(self, field.name)
+        
+        return self.__class__(**new_data)

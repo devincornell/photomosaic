@@ -8,89 +8,127 @@ import numpy as np
 import random
 import tqdm
 import multiprocessing
+import coproc
+
 random.seed(0)
 
 import canvas
 
 
-def find_best_chunk_thread(args) -> canvas.SubCanvasScores:
-    thread_index: int = args[0]
-    width: int = args[1]
-    source_images: typing.List[canvas.SourceImage] = args[2]
-    target_subcanvases: typing.List[canvas.SubCanvas] = args[3]
-    outfolder: pathlib.Path = args[4]
+import tqdm
+import os
+
+def parallel_batch_and_calc_distances(
+    imman: canvas.ImageManager, 
+    grid: canvas.ImageGrid, 
+    pickle_path: pathlib.Path,
+    monitor: coproc.MonitorMessengerInterface,
+    batch_size: int = 10,
+    processes: int = os.cpu_count(),
+) -> None:
+    pickle_path.mkdir(exist_ok=True, parents=True)
     
-    # compute distances for every source image to every target subcanvas
-    distances: typing.List[typing.Tuple[int,float,canvas.SubCanvas]] = list()
-    for si in tqdm.tqdm(source_images):
-        try:
-            si_canvas = si.retrieve_canvas()
-            for ind, target_sc in enumerate(target_subcanvases):
-                d = target_sc.dist.composit(si_canvas)
-                distances.append((ind, d, si_canvas))
-        except ValueError as e:
-            print(f'\ncouldn\'t load image {si.source_fpath}')
-        except OSError as e:
-            print(f'\ncouldn\'t load image {si.source_fpath}')
-    scs = canvas.SubCanvasScores.from_distances(distances)
-    best = scs.to_canvas(width)
-    best.write_image(outfolder.joinpath(f'current_{thread_index}.png'))
-    print(f'\nfinished {thread_index}')
-    return scs
-
-def main():
-    import coproc
-
-
-    thumb_res = (67, 89)
-    height_images = 30
-    target = canvas.FileImage.read(
-        #path=pathlib.Path("data/targets/Gray-Mountain_small.webp"),
-        path=pathlib.Path("data/targets/lofi_tiny.jpg"),
-    )
-    h,w = target.size
-    aspect = h / w
-    new_height = height_images * thumb_res[0]
-    new_width = int(new_height / aspect)
-    target = target.resize((new_height, new_width))
-    print(f'{target.size=}')
+    monitor.print(f'batching into sizes of {batch_size}')
+    imman_batches = imman.batch_image_managers(batch_size=batch_size)
+    monitor.print(f'{len(imman_batches)=}')
     
-    grid = canvas.ImageGrid.from_fixed_subimages(target, thumb_res[0], thumb_res[1])
-    print(f'{grid[0,0].size=}')
-    #grid.to_image().as_ubyte().write('tmp.png')
-    print(f'{grid.to_image().size=}')
+    with multiprocessing.Pool(processes) as pool:
+        monitor.print(f'started {processes} processes')
+        
+        monitor.update_child_processes()
+        
+        map_func = pool.imap_unordered
+        batch_it = [(imman, grid) for imman in (imman_batches)]
+        
+        monitor.print('starting main loop')
+        for i, r in tqdm.tqdm(enumerate(map_func(thread_calc_and_save_distances, batch_it)), total=len(batch_it)):
+            monitor.label(f'finished batch {i}')
+            
+            with pickle_path.joinpath(f'batch_{i}.pkl').open('wb') as f:
+                pickle.dump(r, f)
+            
+            monitor.label(f'saved pickle {pickle_path}')
     
-    exit()
-    height, width = 30, 30
-    outfolder = pathlib.Path("data/lofi-30x30/")
-    outfolder.mkdir(exist_ok=True, parents=True)
+import pickle
+def thread_calc_and_save_distances(args):
+    imman: canvas.ImageManager = args[0]
+    grid: canvas.ImageGrid = args[1]
+    
+    dists = dict()
+    for thumb in imman.read_thumbs():
+        for (y,x), si in grid.images():
+            #print('.', end='', flush=True)
+            d = thumb.dist.composit(si)
+            dists[(str(thumb.path), (y,x))] = d
+    return dists
 
-    the_monitor = coproc.Monitor(
+
+
+
+import coproc
+
+def new_monitor(outfolder: pathlib.Path) -> coproc.Monitor:
+    return coproc.Monitor(
         fig_path=outfolder.joinpath('progress.png'), 
         log_path=outfolder.joinpath('progress.log'), 
         snapshot_seconds=1, 
         save_fig_freq=1
     )
 
-    with the_monitor as monitor:
-        #monitor.add_note(target.im.dtype, target.im.shape, do_print=True)    
-            
-        #height, width = 30, 30
-        #subtargets = list(target.split_subcanvases(height, width))
+def main(preprocess_thumbs: bool = False):
+    outfolder = pathlib.Path("data/experimental/")
+    #outfolder.mkdir(exist_ok=True, parents=True)
+    
+    with new_monitor(outfolder) as monitor:
+        monitor.add_note('reading and resizing target')
+        thumb_res = (64, 64)
+        height_images = 10
+        target = canvas.FileImage.read(
+            #path=pathlib.Path("data/targets/Gray-Mountain_small.webp"),
+            path=pathlib.Path("data/targets/lofi_tiny.jpg"),
+        )
+        h,w = target.size
+        aspect = h / w
+        new_height = height_images * thumb_res[0]
+        new_width = int(new_height / aspect)
+        target = target.resize((new_height, new_width))
+        monitor.print(f'{target.size=}')
         
+        grid = canvas.ImageGrid.from_fixed_subimages(target, thumb_res[0], thumb_res[1])
+        monitor.print(f'grid size: {grid.size=}')
+        monitor.print(f'subimage: {grid[0,0].size=}, {grid.sub_size=}')
+        monitor.print(f'full image: {grid.to_image().size=}, {grid.full_size=}')
         
-        thumb_res = (67, 89)
+                
+        monitor.label('grabbing source images')
         imman = canvas.ImageManager.from_rglob(
             source_folder=pathlib.Path("/StorageDrive/unzipped_photos/Takeout/"),
-            thumb_folder=pathlib.Path("data/personal_thumbs/"),
+            thumb_folder=pathlib.Path("data/personal_thumbs2/"),
             scale_res=thumb_res,
             extensions=('png','jpg', 'JPG'),
         )
-        monitor.add_note(f'{len(imman)=}', do_print=True)
-        if True:
-            imman = imman.filter_usable_photo(use_tqdm=True)
-            monitor.add_note(f'{len(imman)=} (after filtering)', do_print=True)
-            imman.create_thumbs(use_tqdm=True)
+        
+        monitor.print(f'{len(imman)=}')
+        imman = imman.filter_usable_photo(use_tqdm=True)
+        monitor.print(f'{len(imman)=} (after filtering)')
+        
+        imman = imman.clone(source_images=imman.source_images[:1000])
+        
+        monitor.print(f'preprocessing {len(imman)=} thumbs')
+        for t in imman.read_thumbs_parallel(use_tqdm=True, processes=4):
+            #monitor.update_child_processes()
+            pass
+        monitor.print(f'finished.')
+        
+        parallel_batch_and_calc_distances(
+            imman=imman,
+            grid=grid,
+            pickle_path=outfolder.joinpath('dists/'),
+            monitor = monitor,
+            batch_size=100,
+            processes=4,
+        )
+        
         exit()
         batches = [(i,width,bi,subtargets, outfolder) for i,bi in enumerate(imman.chunk_source_images(height * width * 2))]
         
