@@ -30,9 +30,13 @@ def main(preprocess_thumbs: bool = False):
     
     with new_monitor(outfolder) as monitor:
         db = canvas.DistanceDB.open(outfolder.joinpath('dists/distances.db'))
-        print(db.q.count_by_target().df())
+        #print(db.q.count_by_target().df())
         #print(db.q.select_top_distances(10).df().columns)
-        print(db.q.select_top_distances(10)[0])
+        top_pos_distances = dict()
+        for dist in db.q.select_top_distances(10):
+            if dist.position not in top_pos_distances:
+                top_pos_distances[dist.position] = dist
+        
         
         
 if __name__ == "__main__":

@@ -8,6 +8,7 @@ import pathlib
 #if typing.TYPE_CHECKING:
 from .image import Image, Height, Width
 from .subimage import SubImage
+from .fileimage import FileImage
 
 class GridX(int):
     pass
@@ -21,6 +22,14 @@ class ImageGrid:
     y_divisions: int
 
     ################## factory method constructors ##################
+    @classmethod
+    def from_thumb_paths(cls, paths: typing.List[pathlib.Path], y_divisions: int) -> ImageGrid:
+        '''Create by creating a grid of fixed-size sqares that fill the image.'''
+        return cls(
+            subimages = [SubImage.from_thumb_path(path) for path in paths], 
+            y_divisions = y_divisions,
+        )
+    
     @classmethod
     def from_fixed_subimages(cls, image: Image, subimage_height: Height, subimage_width: Width) -> ImageGrid:
         '''Create by creating a grid of fixed-size sqares that fill the image.'''
