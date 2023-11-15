@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import typing
 import doctable
 import dataclasses
 import pathlib
@@ -36,7 +37,7 @@ class Query:
         WHERE r <= {n} 
         ORDER BY distance ASC;
     '''
-    def select_top_distances(self, n: int) -> sqlalchemy.RowProxy:
+    def select_top_distances(self, n: int) -> typing.List[Distance]:
         results = self.select_top_distances_sql(n)
         #return results.all()[0]
         return [Distance(**r._mapping) for r in results.all()]

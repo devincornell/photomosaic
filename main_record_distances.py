@@ -31,7 +31,7 @@ def parallel_batch_and_calc_distances(
     processes: int = os.cpu_count(),
 ) -> None:
     pickle_path.mkdir(exist_ok=True, parents=True)
-    tab = Distance.open_table(pickle_path.joinpath('distances.db'))
+    db = canvas.DistanceDB.open(pickle_path.joinpath('distances.db'))
     
     monitor.print(f'batching into sizes of {batch_size}')
     imman_batches = imman.batch_image_managers(batch_size=batch_size)
@@ -51,7 +51,7 @@ def parallel_batch_and_calc_distances(
             
             #with pickle_path.joinpath(f'batch_{i}.pkl').open('wb') as f:
             #    pickle.dump(r, f)
-            with tab.query() as q:
+            with db.tab.query() as q:
                 q.insert_multi(dists, ifnotunique='REPLACE')
             
             monitor.label(f'saved pickle {pickle_path}')
@@ -62,14 +62,11 @@ def thread_calc_and_save_distances(args):
     grid: canvas.ImageGrid = args[1]
     target_path: pathlib.Path = args[2]
     
-    #dists = dict()
     dists = list()
     for thumb in imman.read_thumbs():
         for i, si in grid.images():
-            #print('.', end='', flush=True)
             d = thumb.dist.composit(si)
-            #dists[(str(thumb.path), (y,x))] = d
-            dists.append(Distance(
+            dists.append(canvas.Distance(
                 target_path=str(target_path),
                 position=i,
                 thumb=str(thumb.path),
@@ -90,7 +87,7 @@ def new_monitor(outfolder: pathlib.Path) -> coproc.Monitor:
         save_fig_freq=1
     )
 
-def main(preprocess_thumbs: bool = False):
+def main():
     outfolder = pathlib.Path("data/experimental/")
     #outfolder.mkdir(exist_ok=True, parents=True)
     
