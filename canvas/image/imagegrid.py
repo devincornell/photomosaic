@@ -34,7 +34,7 @@ class ImageGrid:
         )
     
     @classmethod
-    def from_even_divisions(cls, image: Image, y_divisions: int, x_divisions: int) -> typing.List[Image]:
+    def from_even_divisions(cls, image: Image, y_divisions: int, x_divisions: int) -> ImageGrid:
         '''Create by dividing up a single canvas into equal parts.'''
         full_h,full_w = image.size
         return cls.from_specs(
@@ -46,7 +46,7 @@ class ImageGrid:
         )
     
     @classmethod
-    def from_specs(cls, image: Image, y_divisions: int, x_divisions: int, subimage_height: int, subimage_width: int) -> typing.List[SubImage]:
+    def from_specs(cls, image: Image, y_divisions: int, x_divisions: int, subimage_height: int, subimage_width: int) -> ImageGrid:
         '''Create a list of subimages that are empty.'''
         subimages = []
         for iy in range(y_divisions):
@@ -64,7 +64,7 @@ class ImageGrid:
         )
     
     ################## Dunder ##################
-    def __getitem__(self, ind: typing.Union[typing.Tuple[GridY,GridX],int]) -> Image:
+    def __getitem__(self, ind: typing.Tuple[GridY,GridX]) -> Image:
         '''Get image at (y,x) location.'''
         y,x = ind
         if y >= self.y_divisions:
@@ -101,11 +101,12 @@ class ImageGrid:
         return len(self.subimages) // self.y_divisions
 
     ################## Getting Grid items ##################
-    def images(self) -> typing.List[typing.Tuple[typing.Tuple[GridX, GridY], SubImage]]:
+    def images(self) -> typing.List[typing.Tuple[int, SubImage]]:
         '''Get the subimages at a grid location.'''
         images = list()
         for i,si in enumerate(self.subimages):
-            images.append((self.ind_to_xy(i,self.y_divisions), si))
+            #self.ind_to_xy(i,self.y_divisions)
+            images.append((i, si))
         return images
 
     ################## Saving ##################
