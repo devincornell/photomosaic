@@ -91,7 +91,13 @@ class ImageManager:
     @staticmethod
     def thread_retrieve_thumbs(sis: typing.List[SourceImage]) -> typing.List[FileImage]:
         '''Read and save a set of thumbs.'''
-        return [si.retrieve_thumb() for si in sis]
+        thumbs = list()
+        for si in sis:
+            try:
+                thumbs.append(si.retrieve_thumb())
+            except OSError:
+                pass
+        return thumbs
         
     ########## Filtering ##########
     def filter_usable_photo(self, **kwargs) -> ImageManager:
