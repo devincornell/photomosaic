@@ -18,7 +18,11 @@ import canvas
 import tqdm
 import os
 
+
+
+
 def parallel_batch_and_calc_distances(
+    target_path: pathlib.Path, 
     imman: canvas.ImageManager, 
     grid: canvas.ImageGrid, 
     pickle_path: pathlib.Path,
@@ -27,6 +31,7 @@ def parallel_batch_and_calc_distances(
     processes: int = os.cpu_count(),
 ) -> None:
     pickle_path.mkdir(exist_ok=True, parents=True)
+    tab = Distance.open_table(pickle_path.joinpath('distances.db'))
     
     monitor.print(f'batching into sizes of {batch_size}')
     imman_batches = imman.batch_image_managers(batch_size=batch_size)
@@ -38,14 +43,16 @@ def parallel_batch_and_calc_distances(
         monitor.update_child_processes()
         
         map_func = pool.imap_unordered
-        batch_it = [(imman, grid) for imman in (imman_batches)]
+        batch_it = [(imman, grid, target_path) for imman in (imman_batches)]
         
         monitor.print('starting main loop')
-        for i, r in tqdm.tqdm(enumerate(map_func(thread_calc_and_save_distances, batch_it)), total=len(batch_it)):
+        for i, dists in tqdm.tqdm(enumerate(map_func(thread_calc_and_save_distances, batch_it)), total=len(batch_it)):
             monitor.label(f'finished batch {i}')
             
-            with pickle_path.joinpath(f'batch_{i}.pkl').open('wb') as f:
-                pickle.dump(r, f)
+            #with pickle_path.joinpath(f'batch_{i}.pkl').open('wb') as f:
+            #    pickle.dump(r, f)
+            with tab.query() as q:
+                q.insert_multi(dists, ifnotunique='REPLACE')
             
             monitor.label(f'saved pickle {pickle_path}')
     
@@ -53,13 +60,21 @@ import pickle
 def thread_calc_and_save_distances(args):
     imman: canvas.ImageManager = args[0]
     grid: canvas.ImageGrid = args[1]
+    target_path: pathlib.Path = args[2]
     
-    dists = dict()
+    #dists = dict()
+    dists = list()
     for thumb in imman.read_thumbs():
-        for (y,x), si in grid.images():
+        for i, si in grid.images():
             #print('.', end='', flush=True)
             d = thumb.dist.composit(si)
-            dists[(str(thumb.path), (y,x))] = d
+            #dists[(str(thumb.path), (y,x))] = d
+            dists.append(Distance(
+                target_path=str(target_path),
+                position=i,
+                thumb=str(thumb.path),
+                distance=d,
+            ))
     return dists
 
 
@@ -113,20 +128,22 @@ def main(preprocess_thumbs: bool = False):
         imman = imman.filter_usable_photo(use_tqdm=True)
         monitor.print(f'{len(imman)=} (after filtering)')
         
-        #imman = imman.clone(source_images=imman.source_images[:1000])
+        #imman = imman.clone(source_images=imman.source_images[:100])
         
-        monitor.print(f'preprocessing {len(imman)=} thumbs')
-        for t in imman.read_thumbs_parallel(use_tqdm=True, processes=4):
-            #monitor.update_child_processes()
-            pass
-        monitor.print(f'finished.')
+        if False:
+            monitor.print(f'preprocessing {len(imman)=} thumbs')
+            for t in imman.read_thumbs_parallel(use_tqdm=True, processes=4):
+                #monitor.update_child_processes()
+                pass
+            monitor.print(f'finished.')
         
         parallel_batch_and_calc_distances(
+            target_path=target.path,
             imman=imman,
             grid=grid,
             pickle_path=outfolder.joinpath('dists/'),
             monitor = monitor,
-            batch_size=100,
+            batch_size=5,
             processes=4,
         )
         
