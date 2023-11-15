@@ -25,7 +25,7 @@ class SubImage(Image):
     window: Window
 
     @classmethod
-    def from_image(cls, image: Image, y: int, x: int, h: int, w: int) -> Image:
+    def from_image(cls, image: Image, y: int, x: int, h: int, w: int) -> SubImage:
         '''Create a subimage from a square of the original canvas.'''
         return cls(
             im = image.im[y:y+h,x:x+w], 
