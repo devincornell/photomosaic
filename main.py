@@ -45,18 +45,18 @@ def greedy_optimize_thread(
 
 def main():
     
-    output_fname = 'data/tmp/best_score_grid_obama.png'
+    output_fname = 'data/outputs/obama/obama_head_coco/best_score_grid_obama.png'
 
     base_file = mediatools.ImageFile.from_path("data/targets/obama.png")
-    base_image = base_file.read().to_rgb().transform.resize((500, 500))
-    sgrid = photomosaic.ImageGrid.from_image(base_image, 10, 10)
+    base_image = base_file.read().to_rgb()#.transform.resize((500, 500))
+    sgrid = photomosaic.ImageGrid.from_image(base_image, 36, 20)
     print(base_image)
 
     cand_files = mediatools.ImageFiles.from_rglob('data/dataset_coco/train/')
     print(len(cand_files))
 
     # all the work happens here!
-    best_scores = greedy_optimize_thread(0, cand_files[:None], sgrid, Path('data/tmp/'))
+    best_scores = greedy_optimize_thread(0, cand_files[:None], sgrid, Path('data/outputs/obama/obama_head_coco/'))
     
     best_score_grid = best_scores.get_subimage_grid()
     best_score_grid.recombine().as_ubyte().write(output_fname)
