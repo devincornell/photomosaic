@@ -9,12 +9,14 @@ import numpy as np
 import random
 import tqdm
 import multiprocessing
-random.seed(0)
 
-#import coproc
-import canvas
 import mediatools
 import photomosaic
+
+
+def transform_img(img: mediatools.Image, size: tuple[int,int]) -> mediatools.Image:
+    '''Transform an image to a comparable format.'''
+    return img.as_float().to_rgb().transform.resize(size)
 
 def greedy_optimize_thread(
     thread_index: int, 
@@ -26,7 +28,7 @@ def greedy_optimize_thread(
     for i, cand_file in tqdm.tqdm(enumerate(cand_files), ncols=100, total=len(cand_files)):
 
         # transform image to comparable format
-        cand_img = cand_file.read().as_float().to_rgb().transform.resize(sgrid.subimage_size)
+        cand_img = transform_img(cand_file.read(), size=sgrid.subimage_size)
 
         # compute distances between candidate and all subimages
         dists = sgrid.calc_distances(cand_img)
@@ -41,15 +43,12 @@ def greedy_optimize_thread(
     return best_scores
 
 
-
-
-
 def main():
     
-    output_fname = 'data/tmp/best_score_grid.png'
+    output_fname = 'data/tmp/best_score_grid_obama.png'
 
-    base_file = mediatools.ImageFile.from_path("data/targets/black_circle1.png")
-    base_image = base_file.read().transform.resize((500, 500))
+    base_file = mediatools.ImageFile.from_path("data/targets/obama.png")
+    base_image = base_file.read().to_rgb().transform.resize((500, 500))
     sgrid = photomosaic.ImageGrid.from_image(base_image, 10, 10)
     print(base_image)
 
