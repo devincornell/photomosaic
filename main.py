@@ -47,7 +47,7 @@ def main():
         fpath=pathlib.Path("data/targets/lofi_tiny.jpg"),
     )
     
-    outfolder = pathlib.Path("data/lofi-30x30/")
+    outfolder = pathlib.Path("data/output/lofi-30x30/")
     outfolder.mkdir(exist_ok=True, parents=True)
 
     the_monitor = coproc.Monitor(
